@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Generates gene snippets of given length and mutation rate at given position"""
+"""Generates Gene Snippets of given length and mutation rate at given index"""
 
 import sys
 import random
@@ -17,13 +17,15 @@ class STICKYGENERATOR(object):
     __bases = ['A', 'B', 'C', 'D']
     __sticks = {'A': 'C', 'B': 'D', 'C': 'A', 'D': 'B'}
 
-    def __init__(self, rate, ends):
+    def __init__(self, length, rate, ends):
         """Initialize a new STICKYGENERATOR Object
 
+        :param len: Length of gene snippets to be generated
         :param rate: Odds that a character gets mutated to a random character
         :param ends: Dist. from either start or end to apply mutation rate to
         :returns: Returns nothing
         """
+        self.len = length
         self.mutation_rate = rate
         self.from_ends = ends
 
@@ -59,7 +61,7 @@ class STICKYGENERATOR(object):
         # Get the bases with the given mutation rate odds
         mutated_char1, mutated_char2 = self.__apply_mutation_rate()
         # Randomly generate the remaining characters
-        random_len = 38 - 2 * (self.from_ends - 1)
+        random_len = (self.len - 2) - 2 * (self.from_ends - 1)
         snippet = [random.choice(self.__bases) for _ in range(random_len)]
         snippet = first_palin + mutated_char1 + snippet + \
             mutated_char2 + second_palin
@@ -99,5 +101,5 @@ if __name__ == '__main__':
         print >> sys.stderr, "output_file\""
         exit(1)
 
-    GENERATOR = STICKYGENERATOR(sys.argv[2], int(sys.argv[3]))
+    GENERATOR = STICKYGENERATOR(40, float(sys.argv[2]), int(sys.argv[3]))
     GENERATOR.generate(sys.argv[4], int(sys.argv[1]))
