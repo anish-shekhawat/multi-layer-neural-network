@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Implements S-K Algorithm for training SVMs on Zener Cards. """
+"""Generates gene snippets of given length and mutation rate at given position"""
 
 import sys
 import random
