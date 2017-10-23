@@ -34,10 +34,16 @@ class STICKYGENERATOR(object):
         :param num: No. of gene snippets to generate
         :returns: Returns nothing
         """
-
+        output = ""
         while num > 0:
             snippet = self.get_gene_snippet()
+            output += snippet + "\n"
             num -= 1
+
+        print output
+        out_file = open(output_file, 'w')
+        out_file.write(output)
+        out_file.close()
 
     def get_gene_snippet(self):
         """Returns a string of gene snippet
@@ -57,9 +63,8 @@ class STICKYGENERATOR(object):
         snippet = [random.choice(self.__bases) for _ in range(random_len)]
         snippet = first_palin + mutated_char1 + snippet + \
             mutated_char2 + second_palin
-        print snippet
-        print len(snippet)
-        return snippet
+
+        return "".join(snippet)
 
     def __generate_stick_palindrome(self):
         """
