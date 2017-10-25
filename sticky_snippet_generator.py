@@ -14,6 +14,7 @@ class STICKYGENERATOR(object):
         :mutation_rate: Odds that a character gets mutated to random character
         :from_ends: Dist. from either start or end to apply mutation rate to
     """
+
     __bases = ['A', 'B', 'C', 'D']
     __sticks = {'A': 'C', 'B': 'D', 'C': 'A', 'D': 'B'}
 
@@ -25,6 +26,7 @@ class STICKYGENERATOR(object):
         :param ends: Dist. from either start or end to apply mutation rate to
         :returns: Returns nothing
         """
+
         self.len = length
         self.mutation_rate = rate
         self.from_ends = ends
@@ -36,13 +38,15 @@ class STICKYGENERATOR(object):
         :param num: No. of gene snippets to generate
         :returns: Returns nothing
         """
+
         output = ""
         while num > 0:
             snippet = self.get_gene_snippet()
             output += snippet + "\n"
             num -= 1
+        output = output[:-1]
 
-        print output
+        # Write to file
         out_file = open(output_file, 'w')
         out_file.write(output)
         out_file.close()
@@ -52,20 +56,20 @@ class STICKYGENERATOR(object):
 
         :returns: String of gene snippet
         """
+
         # Get the stick palindrome segment of gene
-        first_palin = []
-        second_palin = []
+        first = []
+        second = []
 
-        if self.from_ends > 1:
-            first_palin, second_palin = self.__generate_stick_palindrome()
-        # Get the bases with the given mutation rate odds
-        mutated_char1, mutated_char2 = self.__apply_mutation_rate()
+        if self.from_ends > 0:
+            first, second = self.__generate_stick_palindrome()
+            # Mutate bases from ends according to given mutation rate
+            self.__apply_mutation_rate(second)
+
         # Randomly generate the remaining characters
-        random_len = (self.len - 2) - 2 * (self.from_ends - 1)
+        random_len = self.len - 2 * self.from_ends
         snippet = [random.choice(self.__bases) for _ in range(random_len)]
-        snippet = first_palin + mutated_char1 + snippet + \
-            mutated_char2 + second_palin
-
+        snippet = first + snippet + second
         return "".join(snippet)
 
     def __generate_stick_palindrome(self):
@@ -76,19 +80,26 @@ class STICKYGENERATOR(object):
         :returns: Two stick palindrome strings
         """
 
-        first = [random.choice(self.__bases) for _ in range(self.from_ends-1)]
+        first = [random.choice(self.__bases) for _ in range(self.from_ends)]
         second = [self.__sticks[item] for item in first]
         second.reverse()
 
         return first, second
 
-    def __apply_mutation_rate(self):
+    def __apply_mutation_rate(self, second_half):
         """Returns a set of two bases with mutation probability
 
         :returns: Two bases which are mutated with mutation_rate odds
         """
-        # TODO: Mutation rate
-        return [random.choice(self.__bases)], [random.choice(self.__bases)]
+
+        for i in range(self.from_ends):
+            # Generate a random number between 0 and 1
+            # Mutate if the random number is less than mutation rate
+            if random.random() < self.mutation_rate:
+                # Get list of bases other than that present
+                mutation_list = list(set(self.__bases) - set(second_half[i]))
+                # Mutate to one of the other bases
+                second_half[i] = random.choice(mutation_list)
 
 
 if __name__ == '__main__':
