@@ -12,7 +12,6 @@ class NEURALNET(object):
     34-STICKY, 56-STICKY, 78-STICKY or STICK_PALINDROME
 
     Attributes:
-        :__bases: Letters which make up a gene
         :__sticks: Dictionary that gives sticking rules
         :len: Length of the gene snippets
         :mini_batch_size: Batch size of data fed into NN
@@ -22,8 +21,7 @@ class NEURALNET(object):
         ::
     """
 
-    __bases = ['A', 'B', 'C', 'D']
-    __sticks = {'A': 'C', 'B': 'D', 'C': 'A', 'D': 'B'}
+    __sticks = {0: 2, 1: 3, 2: 0, 3: 1}
     mini_batch_size = 20
     learning_rate = 0.01
 
@@ -37,6 +35,8 @@ class NEURALNET(object):
         self.len = length
         self.data = []
 
+        # TODO:
+        conv_dict = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
         # Get all txt files in data_folder
         for filename in os.listdir(data_folder):
             abs_path = os.path.abspath(data_folder) + "/" + filename
@@ -46,6 +46,8 @@ class NEURALNET(object):
                         line = line.strip()
                         # Check if length of
                         if len(line) == 40:
+                            line = [conv_dict[ch] for ch in line]
+                            print self.determine_label(line)
                             self.data.append(line)
 
     def train(self):
@@ -80,9 +82,12 @@ class NEURALNET(object):
         """
         length = len(snippet)
 
-        snippet_dict = {'12-STICKY': [1, 2], '34-STICKY': [3, 4],
-                        '56-STICKY': [5, 6], '78-STICKY': [7, 8],
-                        'STICK_PALINDROME': [length/2]}
+        one_hot_vector_dict = {(0, 0): [1, 0, 0, 0, 0, 0],
+                               (1, 2): [0, 1, 0, 0, 0, 0],
+                               (3, 4): [0, 0, 1, 0, 0, 0],
+                               (5, 6): [0, 0, 0, 1, 0, 0],
+                               (7, 8): [0, 0, 0, 0, 1, 0],
+                               (length / 2, length / 2): [0, 0, 0, 0, 0, 1]}
 
         i = 0
         while i < (len(snippet)/2):
@@ -90,12 +95,11 @@ class NEURALNET(object):
                 break
             i += 1
 
-        label = [key for key, value in snippet_dict.items() if i in value]
+        for key in one_hot_vector_dict:
+            if i in key:
+                label = one_hot_vector_dict[key]
 
-        if label:
-            return "".join(label)
-        else:
-            return 'None'
+        return label
 
 
 if __name__ == '__main__':
