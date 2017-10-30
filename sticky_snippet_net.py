@@ -2,7 +2,9 @@
 """Trains and Tests a Neural Net on Gene Snippets for Sticky Snippets"""
 
 import sys
+import random
 import os
+import tensorflow as tf
 
 
 class NEURALNET(object):
@@ -47,13 +49,45 @@ class NEURALNET(object):
                         # Check if length of
                         if len(line) == 40:
                             line = [conv_dict[ch] for ch in line]
-                            print self.determine_label(line)
                             self.data.append(line)
 
     def train(self):
         """Trains the Neural Net on data folder
         """
-        pass
+
+        # Input
+        x = tf.placeholder(tf.float32, [None, 40])
+        # Weights
+        W = tf.Variable(tf.zeros([40, 6]))
+        # Bias
+        b = tf.Variable(tf.zeros([6]))
+        # Class labels
+        y_ = tf.placeholder(tf.float32, [None, 6])
+
+        y = tf.matmul(x, W) + b
+
+        cross_entropy = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+
+        train_step = tf.train.GradientDescentOptimizer(
+            0.5).minimize(cross_entropy)
+
+        self.__randomize_inputs()
+
+        for k in range(0, len(self.data), self.mini_batch_size):
+            current_batch = self.data[k: k+self.mini_batch_size]
+            batch_labels = self.determine_labels(current_batch)
+
+
+    def __randomize_inputs(self):
+        """Randomizes the input data
+        """
+
+        for i in range(0, len(self.data)-1):
+            j = random.randint(i + 1, len(self.data)-1)
+            temp = self.data[i]
+            self.data[i] = self.data[j]
+            self.data[j] = temp
 
     def test(self):
         """Tests the Neural Net on data folder
@@ -74,14 +108,14 @@ class NEURALNET(object):
         """
         pass
 
-    def determine_label(self, snippet):
+    def determine_labels(self, snippets):
         """Determines the label of the input gene snippet
 
         :param snippet: Gene snippet
         :returns: Class of gene snippet
         """
-        length = len(snippet)
 
+        length = self.len
         one_hot_vector_dict = {(0, 0): [1, 0, 0, 0, 0, 0],
                                (1, 2): [0, 1, 0, 0, 0, 0],
                                (3, 4): [0, 0, 1, 0, 0, 0],
@@ -89,17 +123,20 @@ class NEURALNET(object):
                                (7, 8): [0, 0, 0, 0, 1, 0],
                                (length / 2, length / 2): [0, 0, 0, 0, 0, 1]}
 
-        i = 0
-        while i < (len(snippet)/2):
-            if snippet[i] != self.__sticks[snippet[length-1-i]]:
-                break
-            i += 1
+        labels = []
+        for snippet in snippets:
+            i = 0
+            while i < (len(snippet)/2):
+                if snippet[i] != self.__sticks[snippet[length-1-i]]:
+                    break
+                i += 1
 
-        for key in one_hot_vector_dict:
-            if i in key:
-                label = one_hot_vector_dict[key]
+            for key in one_hot_vector_dict:
+                if i in key:
+                    label = one_hot_vector_dict[key]
+                    labels.append(label)
 
-        return label
+        return labels
 
 
 if __name__ == '__main__':
@@ -124,3 +161,6 @@ if __name__ == '__main__':
         exit(1)
 
     NET = NEURALNET(40, sys.argv[3])
+
+    if sys.argv[1] == 'train':
+        NET.train()
