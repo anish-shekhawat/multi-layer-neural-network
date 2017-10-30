@@ -6,6 +6,8 @@ import random
 import os
 import tensorflow as tf
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 
 class NEURALNET(object):
     """A Neural Net (NN) that classifies a gene snippet's stickiness
@@ -24,7 +26,7 @@ class NEURALNET(object):
     """
 
     __sticks = {0: 2, 1: 3, 2: 0, 3: 1}
-    mini_batch_size = 20
+    mini_batch_size = 5
     learning_rate = 0.01
 
     def __init__(self, length, data_folder):
@@ -61,23 +63,30 @@ class NEURALNET(object):
         W = tf.Variable(tf.zeros([40, 6]))
         # Bias
         b = tf.Variable(tf.zeros([6]))
+        # Global Initializer
+        init = tf.global_variables_initializer()
         # Class labels
         y_ = tf.placeholder(tf.float32, [None, 6])
-
+        # Output label
         y = tf.matmul(x, W) + b
 
         cross_entropy = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
 
+        # Gradient descent with 0.5 as learning rate
         train_step = tf.train.GradientDescentOptimizer(
             0.5).minimize(cross_entropy)
 
+        # Randomize the input data
         self.__randomize_inputs()
+        # Initialize the TensorFlow session
+        sess = tf.InteractiveSession()
+        sess.run(init)
 
         for k in range(0, len(self.data), self.mini_batch_size):
-            current_batch = self.data[k: k+self.mini_batch_size]
-            batch_labels = self.determine_labels(current_batch)
-
+            batch_xs = self.data[k: k + self.mini_batch_size]
+            batch_ys = self.determine_labels(batch_xs)
+            sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
     def __randomize_inputs(self):
         """Randomizes the input data
@@ -100,11 +109,6 @@ class NEURALNET(object):
 
     def cross_validation(self, k):
         """Performs a k-fold cross validation training and testing
-        """
-        pass
-
-    def __validate_input(self):
-        """Checks if input data gene snippets are of valid length
         """
         pass
 
