@@ -11,6 +11,7 @@ class STICKYGENERATOR(object):
     Attributes:
         :__bases: Letters which make up a gene
         :__sticks: Dictionary that gives sticking rules
+        :len: Length of the gene snippets
         :mutation_rate: Odds that a character gets mutated to random character
         :from_ends: Dist. from either start or end to apply mutation rate to
     """
