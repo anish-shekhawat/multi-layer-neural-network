@@ -23,11 +23,6 @@ class NEURALNET(object):
     Attributes:
         :__sticks: Dictionary that gives sticking rules
         :len: Length of the gene snippets
-        :mini_batch_size: Batch size of data fed into NN
-        :learning_rate: Learning rate of neural net
-        :data: Input data
-        ::
-        ::
     """
 
     __sticks = {0: 2, 1: 3, 2: 0, 3: 1}
@@ -35,7 +30,7 @@ class NEURALNET(object):
     def __init__(self, length):
         """Initialize a new NEURALNET Object
 
-        :param data_folder: Input data folder name
+        :param length: Length of snippets
         :returns: Returns nothing
         """
 
@@ -43,6 +38,9 @@ class NEURALNET(object):
 
     def __initialize_variables(self, mode):
         """Initializes Tensorflow variable
+
+        :param mode: Mode in which script is run (train,test,k-fold)
+        :returns: Train step, input, label, accuracy Tensor depending on mode
         """
         # Input
         X = tf.placeholder(tf.float32, [None, 40], name='X')
@@ -55,17 +53,20 @@ class NEURALNET(object):
         b1 = tf.get_variable("b1", shape=(6), dtype=tf.float32,
                              initializer=xavier)
 
-        w2 = tf.get_variable("w2", shape=(6, 100), dtype=tf.float32,
+        # Layer 2
+        w2 = tf.get_variable("w2", shape=(6, 300), dtype=tf.float32,
                              initializer=xavier)
-        b2 = tf.get_variable("b2", shape=(100), dtype=tf.float32,
-                             initializer=xavier)
-
-        w3 = tf.get_variable("w3", shape=(100, 100), dtype=tf.float32,
-                             initializer=xavier)
-        b3 = tf.get_variable("b3", shape=(100), dtype=tf.float32,
+        b2 = tf.get_variable("b2", shape=(300), dtype=tf.float32,
                              initializer=xavier)
 
-        w4 = tf.get_variable("w4", shape=(100, 6), dtype=tf.float32,
+        # Layer 3
+        w3 = tf.get_variable("w3", shape=(300, 300), dtype=tf.float32,
+                             initializer=xavier)
+        b3 = tf.get_variable("b3", shape=(300), dtype=tf.float32,
+                             initializer=xavier)
+
+        # Layer 4
+        w4 = tf.get_variable("w4", shape=(300, 6), dtype=tf.float32,
                              initializer=xavier)
         b4 = tf.get_variable("b4", shape=(6), dtype=tf.float32,
                              initializer=xavier)
@@ -78,10 +79,12 @@ class NEURALNET(object):
         layer3 = self.perceptron(w3, layer2, b3)
         logits = self.perceptron(w4, layer3, b4)
 
+        # Accuracy tensor
         prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(
             tf.cast(prediction, tf.float32), name='accuracy')
 
+        # Loss function
         cross_entropy = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=logits))
 
@@ -92,24 +95,29 @@ class NEURALNET(object):
             return train_step, X, y_
         elif mode == "test":
             return accuracy, X, y_, logits
-        else:
-            return accuracy, train_step, X, y_, logits
+
+        return accuracy, train_step, X, y_, logits
 
     def train(self, model_file='trained_model', data=None, model_params=None):
         """Trains the Neural Net on data folder
+
+        :param model_file: File to which model is written
+        :param data: Input data
+        :param model_params: Tensorflow Model parameters
+        :returns: Time taken to train
         """
         start_time = time.time()
         if data is None:
             # Get training data
             data = self.import_data(sys.argv[3])
+            total_items = len(data)
             train_step, X, y_ = self.__initialize_variables("train")
-            # Randomize the input data
         else:
-            # accuracy = model_params['accuracy']
             train_step = model_params['train_step']
             X = model_params['X']
             y_ = model_params['y_']
 
+        # Randomize the input data
         self.__randomize_inputs(data)
         # Global Initializer
         init = tf.global_variables_initializer()
@@ -121,26 +129,32 @@ class NEURALNET(object):
         for i in range(EPOCH):
             print "\nEpoch" + str(i) + ":\n",
             counter = 0
+            # Feed data in batches of size MINI_BATCH_SIZE
             for k in range(0, len(data), MINI_BATCH_SIZE):
                 batch_xs = data[k: k + MINI_BATCH_SIZE]
                 batch_ys = self.determine_labels(batch_xs)
                 sess.run(train_step, feed_dict={
-                                   X: batch_xs, y_: batch_ys})
+                    X: batch_xs, y_: batch_ys})
                 counter += len(batch_xs)
                 if (counter) % 1000 == 0:
                     print str(counter) + " inputs trained."
 
         print "Processing complete!!"
-        print ("Total number of items trained on: %s" % len(data))
         # Save model to file
         saver = tf.train.Saver()
         saver.save(sess, model_file)
 
         if model_params is None:
-            print("Training time: %s seconds" % (time.time() - start_time))
+            print "Training time: %s seconds" % (time.time() - start_time)
+            print "Total number of items trained on: %s" % total_items
+
+        return time.time() - start_time
 
     def __randomize_inputs(self, data):
         """Randomizes the input data
+
+        :param data: Input data
+        :returns: Returns nothing
         """
 
         for i in range(0, len(data)-1):
@@ -163,6 +177,11 @@ class NEURALNET(object):
 
     def test(self, model_file='trained_model', data=None, model_params=None):
         """Tests the Neural Net on data folder
+
+        :param model_file: File from which model is read
+        :param data: Input data
+        :param model_params: Tensorflow Model parameters
+        :returns: Accuracy, Confusion Matrix, Rates & Time taken to train
         """
         start_time = time.time()
         # Check if model file exists
@@ -173,6 +192,7 @@ class NEURALNET(object):
         if data is None:
             # Get testing data
             data = self.import_data(sys.argv[3])
+            total_items = len(data)
             accuracy, X, y_, logits = self.__initialize_variables("test")
         else:
             accuracy = model_params['accuracy']
@@ -188,7 +208,7 @@ class NEURALNET(object):
         print "Model restored!"
 
         test_accuracy = accuracy.eval(session=sess, feed_dict={
-                                     X: data, y_: labels})
+            X: data, y_: labels})
 
         prediction = tf.argmax(logits, 1)
         actual = tf.argmax(labels, 1)
@@ -199,11 +219,13 @@ class NEURALNET(object):
             act, pred).eval(session=sess)
 
         TP = tf.count_nonzero(prediction * actual, dtype=tf.float32)
-        TN = tf.count_nonzero((prediction - 1) * (actual - 1), dtype=tf.float32)
+        TN = tf.count_nonzero((prediction - 1) * (actual - 1),
+                              dtype=tf.float32)
         FP = tf.count_nonzero(prediction * (actual - 1), dtype=tf.float32)
         FN = tf.count_nonzero((prediction - 1) * actual, dtype=tf.float32)
 
-        tp, tn, fp, fn = sess.run([TP, TN, FP, FN], feed_dict={X: data, y_: labels})
+        tp, tn, fp, fn = sess.run([TP, TN, FP, FN],
+                                  feed_dict={X: data, y_: labels})
 
         rates = {}
         rates['tpr'] = tp / (tp + fp)
@@ -214,20 +236,24 @@ class NEURALNET(object):
         duration = time.time() - start_time
 
         if model_params is None:
-            print ("Total number of items tested on: %s" % len(data))
-            print ("Overall Accuracy over testing data: %s" % test_accuracy)
-            print ("True Positive Rate: %s" % rates['tpr'])
-            print ("True Negative Rate: %s" % rates['tnr'])
-            print ("False Positive Rate: %s" % rates['fpr'])
-            print ("False Negative Rate: %s" % rates['fnr'])
-            print("Testing time: %s seconds" % duration)
-            print("Confusion Matrix: ")
+            print "Total number of items tested on: %s" % total_items
+            print "Overall Accuracy over testing data: %s" % test_accuracy
+            print "True Positive Rate: %s" % rates['tpr']
+            print "True Negative Rate: %s" % rates['tnr']
+            print "False Positive Rate: %s" % rates['fpr']
+            print "False Negative Rate: %s" % rates['fnr']
+            print "Testing time: %s seconds" % duration
+            print "Confusion Matrix: "
             print confusion_matrix
 
         return test_accuracy, confusion_matrix, rates, duration
 
     def cross_validation(self, k, model_file):
         """Performs a k-fold cross validation training and testing
+
+        :params k: k-fold cross validation
+        :param model_file: File to which model is written and then read
+        :returns: Returns nothing
         """
 
         data = self.import_data(sys.argv[3])
@@ -245,11 +271,13 @@ class NEURALNET(object):
 
         subset_size = len(data) / k
         subsets = []
-        for i in range(k):
-            subset = data[i:subset_size]
+        for i in range(0, len(data), subset_size):
+            subset = data[i: i + subset_size]
             subsets.append(subset)
 
         accuracy_sum = 0
+        train_dur = 0
+        test_dur = 0
         for j in range(k):
             train_set = []
             for i in range(k):
@@ -257,12 +285,22 @@ class NEURALNET(object):
                     train_set.extend(subsets[i])
                 else:
                     test_set = subsets[i]
-            self.train(model_file, train_set, params)
-            accur, matrix = self.test(model_file, test_set, params)
+            train_dur += self.train(model_file, train_set, params)
+            accur, matrix, rates, dur = self.test(model_file, test_set, params)
             accuracy_sum += accur
+            test_dur += dur
 
+        print "Processing complete!"
+        print "Total no. of items trained and tested: %s" % len(data)
+        print "Overall Accuracy over testing data: %s" % (accuracy_sum / 5)
+        print "True Positive Rate: %s" % rates['tpr']
+        print "True Negative Rate: %s" % rates['tnr']
+        print "False Positive Rate: %s" % rates['fpr']
+        print "False Negative Rate: %s" % rates['fnr']
+        print "Training time: %s seconds" % train_dur
+        print "Testing time: %s seconds" % test_dur
+        print "Confusion Matrix: "
         print matrix
-        print accuracy_sum / 5
 
     def import_data(self, folder):
         """Import data from folder
@@ -347,5 +385,5 @@ if __name__ == '__main__':
         NET.train(sys.argv[2])
     elif sys.argv[1] == 'test':
         NET.test(sys.argv[2])
-    else:
+    elif sys.argv[1] == '5fold':
         NET.cross_validation(5, sys.argv[2])
