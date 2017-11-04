@@ -106,4 +106,13 @@ settings.json
 # Custom
 out.txt
 train/
+train_*/
+test_*/
 test/
+model/
+*.zip
+*.pdf
+*.pages
+
+#macOS
+.DS_Store
