@@ -45,7 +45,6 @@ class STICKYGENERATOR(object):
             snippet = self.get_gene_snippet()
             output += snippet + "\n"
             num -= 1
-        output = output[:-1]
 
         # Write to file
         out_file = open(output_file, 'w')
